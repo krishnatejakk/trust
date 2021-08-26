@@ -418,7 +418,7 @@ def create_perclass_imb(dset_name, fullset, split_cfg, num_cls, augVal):
         remain_idx = list(set(full_idx_class) - set(class_train_idx))
         class_val_idx = list(np.random.choice(np.array(remain_idx), size=split_cfg['per_class_val'][i], replace=False))
         remain_idx = list(set(remain_idx) - set(class_val_idx))
-        class_lake_idx = list(np.random.choice(np.array(remain_idx), size=split_cfg['per_class_lake'][i], replace=False))
+        class_lake_idx = list(np.random.choice(np.array(remain_idx), size=min(len(remain_idx), split_cfg['per_class_lake'][i]), replace=False))
 
         train_idx += class_train_idx
         if(augVal and (i in selected_classes)): #augment with samples only from the imbalanced classes
