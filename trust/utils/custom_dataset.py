@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 import PIL.Image as Image
 from .utils import *
+import random
 np.random.seed(42)
 torch.manual_seed(42)
 
@@ -425,6 +426,9 @@ def create_perclass_imb(dset_name, fullset, split_cfg, num_cls, augVal):
             train_idx += class_val_idx
         val_idx += class_val_idx
         lake_idx += class_lake_idx
+    random.shuffle(train_idx)
+    random.shuffle(val_idx)
+    random.shuffle(lake_idx)
     train_set = SubsetWithTargets(fullset, train_idx, torch.Tensor(fullset.targets)[train_idx])
     val_set = SubsetWithTargets(fullset, val_idx, torch.Tensor(fullset.targets)[val_idx])
     lake_set = SubsetWithTargets(fullset, lake_idx, torch.Tensor(fullset.targets)[lake_idx])

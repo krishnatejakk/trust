@@ -1,8 +1,8 @@
 import math
 import numpy as np
-
 from torch.utils.data import Subset
 from .strategy import Strategy
+
 
 class PartitionStrategy(Strategy):
     

@@ -84,6 +84,13 @@ class ConcatWithTargets(Dataset):
         return len(self.targets)
 
 
+class RandomizeDataset(Dataset):
+    """
+    Randomize the ordering of the data samples in the dataset
+    """
+    pass
+
+
 class LabeledToUnlabeledDataset(Dataset):
     """
     Provides a convenience torch.utils.data.Dataset subclass that allows one to 
