@@ -35,6 +35,7 @@ from trust.utils.custom_dataset import load_dataset_custom
 from torch.utils.data import Subset
 from torch.autograd import Variable
 import tqdm
+import argparse
 from math import floor
 from sklearn.metrics.pairwise import cosine_similarity, pairwise_distances
 from trust.strategies.smi import SMI
@@ -48,6 +49,8 @@ np.random.seed(seed)
 random.seed(seed)
 from trust.utils.utils import *
 from trust.utils.viz import tsne_smi
+
+
 
 """### Helper functions"""
 
@@ -211,11 +214,23 @@ def print_final_results(res_dict, sel_cls_idx):
 """# Data, Model & Experimental Settings
 The CIFAR-10 dataset contains 60,000 32x32 color images in 10 different classes.The 10 different classes represent airplanes, cars, birds, cats, deer, dogs, frogs, horses, ships, and trucks. There are 6,000 images of each class. The training set contains 50,000 images and test set contains 10,000 images. We will use custom_dataset() function in Trust to simulated a class imbalance scenario using the split_cfg dictionary given below. We then use a ResNet18 model as our task DNN and train it on the simulated imbalanced version of the CIFAR-10 dataset. Next we perform targeted selection using various SMI functions and compare their gain in overall accuracy as well as on the imbalanced classes.
 """
-cls_cnts = [100, 250, 500, 750, 1000]
 
-for per_cls_cnt in cls_cnts:
+parser = argparse.ArgumentParser(description='Device ID and Class Count')
+parser.add_argument('--device_id', type=int,
+                    help='CUDA Device ID')
+parser.add_argument('--per_cls_cnt', type='int', 
+                    help='Number of samples per class')
+
+args = parser.parse_args()
+
+
+cls_cnts = [100, 250, 500, 750, 1000]
+budgets = [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000]
+
+#for per_cls_cnt in cls_cnts:
+for budget in budgets:
     feature = "classimb"
-    device_id = 0
+    device_id = args.device_id
     run = "test_run"
     datadir = 'data/'
     data_name = 'cifar10'
@@ -226,25 +241,25 @@ for per_cls_cnt in cls_cnts:
     miscls = False  # Set to True if only the misclassified examples from the imbalanced classes is to be used
     embedding_type = "gradients"  # Type of the representation to use (gradients/features)
     num_cls = 10
-    budget = 400
-    per_cls_cnt = 100
+    #budget = 5000
+    per_cls_cnt = args.per_cls_cnt
     visualize_tsne = False
     split_cfg = {"sel_cls_idx": [0],  # Class of the query set
-                 "per_class_train": {0: per_cls_cnt, 1: per_cls_cnt, 2: per_cls_cnt, 3: per_cls_cnt, 4: per_cls_cnt,
-                                     5: per_cls_cnt, 6: per_cls_cnt, 7: per_cls_cnt, 8: per_cls_cnt, 9: per_cls_cnt},
-                 "per_class_val": {0: 20, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0},
-                 "per_class_lake": {0: 5000, 1: 5000, 2: 5000, 3: 5000, 4: 5000, 5: 5000, 6: 5000, 7: 5000, 8: 5000,
+                "per_class_train": {0: per_cls_cnt, 1: per_cls_cnt, 2: per_cls_cnt, 3: per_cls_cnt, 4: per_cls_cnt,
+                                    5: per_cls_cnt, 6: per_cls_cnt, 7: per_cls_cnt, 8: per_cls_cnt, 9: per_cls_cnt},
+                "per_class_val": {0: 20, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0},
+                "per_class_lake": {0: 5000, 1: 5000, 2: 5000, 3: 5000, 4: 5000, 5: 5000, 6: 5000, 7: 5000, 8: 5000,
                                     9: 5000},
-                 "per_class_test": {0: 100, 1: 100, 2: 100, 3: 100, 4: 100, 5: 100, 6: 100, 7: 100, 8: 100, 9: 100}}
+                "per_class_test": {0: 100, 1: 100, 2: 100, 3: 100, 4: 100, 5: 100, 6: 100, 7: 100, 8: 100, 9: 100}}
     initModelPath = "./" + data_name + "_" + model_name + "_" + str(learning_rate) + "_" + str(split_cfg["sel_cls_idx"])
 
 
     def weak_labeling(dataset_name, datadir, feature, model_name, budget, split_cfg, num_cls, learning_rate, run,
-                      device, computeErrorLog, strategy="SIM", sf=""):
-        resultsPath = "./" + data_name + "_" + model_name + "_" + str(per_cls_cnt) + "_" + strategy + "_" + sf + ".json"
+                    device, computeErrorLog, strategy="SIM", sf=""):
+        resultsPath = "./" + data_name + "_" + model_name + "_" + str(per_cls_cnt) + "_" + str(budget) + "_" + strategy + "_" + sf + ".json"
         # load the dataset in the class imbalance setting
         train_set, val_set, test_set, lake_set, sel_cls_idx, num_cls = load_dataset_custom(datadir, dataset_name, feature,
-                                                                                           split_cfg, False, False)
+                                                                                        split_cfg, False, False)
         val_sets = []
         for i in range(num_cls):
             tmp_indices = torch.where(train_set.targets == i)[0]
@@ -262,7 +277,7 @@ for per_cls_cnt in cls_cnts:
 
         # Create dataloaders
         trainloader = torch.utils.data.DataLoader(train_set, batch_size=trn_batch_size,
-                                                  shuffle=True, pin_memory=True)
+                                                shuffle=True, pin_memory=True)
 
         valloaders = []
 
@@ -275,49 +290,18 @@ for per_cls_cnt in cls_cnts:
                                                 shuffle=False, pin_memory=True)
 
         lakeloader = torch.utils.data.DataLoader(lake_set, batch_size=tst_batch_size,
-                                                 shuffle=False, pin_memory=True)
+                                                shuffle=False, pin_memory=True)
 
         true_lake_set = copy.deepcopy(lake_set)
         # Budget for subset selection
         bud = budget
         # Variables to store accuracies
         num_rounds = 1  # The first round is for training the initial model and the second round is to train the final model
-        fulltrn_losses = 0
-        val_losses = 0
-        tst_losses = 0
-        timing = 0
-        val_acc = 0
         full_trn_acc = 0
-        tst_acc = 0
-        final_tst_predictions = 0
-        final_tst_classifications = 0
-        best_val_acc = -1
-        csvlog = []
-        val_csvlog = []
-        # Results logging file
-        all_logs_dir = './results/' + dataset_name + '/' + feature + '/' + sf + '/' + str(bud) + '/' + str(run)
-        #     print("Saving results to: ", all_logs_dir)
-        #     subprocess.run(["mkdir", "-p", all_logs_dir]) #Uncomment for saving results
-        exp_name = dataset_name + "_" + feature + "_" + strategy + "_" + str(
-            len(sel_cls_idx)) + "_" + sf + '_budget:' + str(bud) + '_rounds:' + str(num_rounds) + '_runs' + str(run)
-
-        # Create a dictionary for storing results and the experimental setting
-        res_dict = {"dataset": data_name,
-                    "feature": feature,
-                    "sel_func": sf,
-                    "sel_budget": budget,
-                    "num_selections": num_rounds - 1,
-                    "model": model_name,
-                    "learning_rate": learning_rate,
-                    "setting": split_cfg,
-                    "all_class_acc": None,
-                    "test_acc": [],
-                    "sel_per_cls": [],
-                    "sel_cls_idx": sel_cls_idx}
-
+        
         # Model Creation
         model = create_model(model_name, num_cls, device, embedding_type)
-        model1 = create_model(model_name, num_cls, device, embedding_type)
+        
         # Loss Functions
         criterion, criterion_nored = loss_function()
         # Getting the optimizer and scheduler
@@ -377,11 +361,13 @@ for per_cls_cnt in cls_cnts:
         unlabeled_lake_set = LabeledToUnlabeledDataset(lake_set)
 
         subsets = []
+        cnt = 0
         for strategy_sel in weak_labelers:
+            print("Class: " + str(cnt) + "\n")
             strategy_sel.update_data(train_set, unlabeled_lake_set)
             strategy_sel.update_model(model)
             subsets.append(strategy_sel.select(budget))
-
+            cnt += 1
         # ####SIM####
         # if (strategy == "SIM" or strategy == "SF"):
         #     if (sf.endswith("mi")):
@@ -393,127 +379,126 @@ for per_cls_cnt in cls_cnts:
         print("#### Selection Complete, Now re-training with augmented subset ####")
         results_dict = dict()
         for i in range(num_cls):
-            tmp_metrics = []
-            for j in range(10):
-                tmp_subset = subsets[i][0:(j+1)*500]
-                tmp_targets = true_lake_set.targets[tmp_subset]
-                tmp_metrics.append(len(torch.where(tmp_targets == i)[0])/len(tmp_targets))
+            tmp_subset = subsets[i]
+            tmp_targets = true_lake_set.targets[tmp_subset]
+            tmp_metrics = len(torch.where(tmp_targets == i)[0])/len(tmp_targets)
             results_dict[i] = tmp_metrics
+
         with open(resultsPath, 'w') as json_file:
-            json.dump(results_dict)
+            json.dump(results_dict, json_file)
 
 
-    """# Submodular Mutual Information (SMI)
-    
-    We let $V$ denote the ground-set of $n$ data points $V = \{1, 2, 3,...,n \}$ and a set function $f:
-     2^{V} xrightarrow{} \Re$. Given a set of items $A, B \subseteq V$, the submodular mutual information (MI)[1,3] is defined as $I_f(A; B) = f(A) + f(B) - f(A \cup B)$. Intuitively, this measures the similarity between $B$ and $A$ and we refer to $B$ as the query set.
-    
-    In [2], they extend MI to handle the case when the target can come from an auxiliary set $V^{\prime}$ different from the ground set $V$. For targeted data subset selection, $V$ is the source set of data instances and the target is a subset of data points (validation set or the specific set of examples of interest).
-    Let $\Omega  = V \cup V^{\prime}$. We define a set function $f: 2^{\Omega} \rightarrow \Re$. Although $f$ is defined on $\Omega$, the discrete optimization problem will only be defined on subsets $A \subseteq V$. To find an optimal subset given a query set $Q \subseteq V^{\prime}$, we can define $g_{Q}(A) = I_f(A; Q)$, $A \subseteq V$ and maximize the same.
-    
-    # FL1MI
-    
-    In the first variant of FL, we set the unlabeled dataset to be $V$. The SMI instantiation of FL1MI can be defined as:
-    \begin{align}
-    I_f(A;Q)=\sum_{i \in V}\min(\max_{j \in A}s_{ij}, \eta \max_{j \in Q}sq_{ij})
-    \end{align}
-    
-    The first term in the min(.) of FL1MI models diversity, and the second term models query relevance. An increase in the value of $\eta$ causes the resulting summary to become more relevant to the query.
-    """
+        """# Submodular Mutual Information (SMI)
+        
+        We let $V$ denote the ground-set of $n$ data points $V = \{1, 2, 3,...,n \}$ and a set function $f:
+        2^{V} xrightarrow{} \Re$. Given a set of items $A, B \subseteq V$, the submodular mutual information (MI)[1,3] is defined as $I_f(A; B) = f(A) + f(B) - f(A \cup B)$. Intuitively, this measures the similarity between $B$ and $A$ and we refer to $B$ as the query set.
+        
+        In [2], they extend MI to handle the case when the target can come from an auxiliary set $V^{\prime}$ different from the ground set $V$. For targeted data subset selection, $V$ is the source set of data instances and the target is a subset of data points (validation set or the specific set of examples of interest).
+        Let $\Omega  = V \cup V^{\prime}$. We define a set function $f: 2^{\Omega} \rightarrow \Re$. Although $f$ is defined on $\Omega$, the discrete optimization problem will only be defined on subsets $A \subseteq V$. To find an optimal subset given a query set $Q \subseteq V^{\prime}$, we can define $g_{Q}(A) = I_f(A; Q)$, $A \subseteq V$ and maximize the same.
+        
+        # FL1MI
+        
+        In the first variant of FL, we set the unlabeled dataset to be $V$. The SMI instantiation of FL1MI can be defined as:
+        \begin{align}
+        I_f(A;Q)=\sum_{i \in V}\min(\max_{j \in A}s_{ij}, \eta \max_{j \in Q}sq_{ij})
+        \end{align}
+        
+        The first term in the min(.) of FL1MI models diversity, and the second term models query relevance. An increase in the value of $\eta$ causes the resulting summary to become more relevant to the query.
+        """
 
-    weak_labeling(data_name,
-                  datadir,
-                  feature,
-                  model_name,
-                  budget,
-                  split_cfg,
-                  num_cls,
-                  learning_rate,
-                  run,
-                  device,
-                  computeClassErrorLog,
-                  "SIM", 'fl1mi')
+        weak_labeling(data_name,
+                    datadir,
+                    feature,
+                    model_name,
+                    budget,
+                    split_cfg,
+                    num_cls,
+                    learning_rate,
+                    run,
+                    device,
+                    computeClassErrorLog,
+                    "SIM", 'fl1mi')
 
-    """# FL2MI
-    
-    In the V2 variant, we set $D$ to be $V \cup Q$. The SMI instantiation of FL2MI can be defined as:
-    \begin{align} \label{eq:FL2MI}
-    I_f(A;Q)=\sum_{i \in Q} \max_{j \in A} sq_{ij} + \eta\sum_{i \in A} \max_{j \in Q} sq_{ij}
-    \end{align}
-    FL2MI is very intuitive for query relevance as well. It measures the representation of data points that are the most relevant to the query set and vice versa. It can also be thought of as a bidirectional representation score.
-    """
+        """# FL2MI
+        
+        In the V2 variant, we set $D$ to be $V \cup Q$. The SMI instantiation of FL2MI can be defined as:
+        \begin{align} \label{eq:FL2MI}
+        I_f(A;Q)=\sum_{i \in Q} \max_{j \in A} sq_{ij} + \eta\sum_{i \in A} \max_{j \in Q} sq_{ij}
+        \end{align}
+        FL2MI is very intuitive for query relevance as well. It measures the representation of data points that are the most relevant to the query set and vice versa. It can also be thought of as a bidirectional representation score.
+        """
 
-    weak_labeling(data_name,
-                  datadir,
-                  feature,
-                  model_name,
-                  budget,
-                  split_cfg,
-                  num_cls,
-                  learning_rate,
-                  run,
-                  device,
-                  computeClassErrorLog,
-                  "SIM", 'fl2mi')
+        weak_labeling(data_name,
+                    datadir,
+                    feature,
+                    model_name,
+                    budget,
+                    split_cfg,
+                    num_cls,
+                    learning_rate,
+                    run,
+                    device,
+                    computeClassErrorLog,
+                    "SIM", 'fl2mi')
 
-    """# GCMI
-    
-    The SMI instantiation of graph-cut (GCMI) is defined as:
-    \begin{align}
-    I_f(A;Q)=2\sum_{i \in A} \sum_{j \in Q} sq_{ij}
-    \end{align}
-    Since maximizing GCMI maximizes the joint pairwise sum with the query set, it will lead to a subset similar to the query set $Q$.
-    """
+        """# GCMI
+        
+        The SMI instantiation of graph-cut (GCMI) is defined as:
+        \begin{align}
+        I_f(A;Q)=2\sum_{i \in A} \sum_{j \in Q} sq_{ij}
+        \end{align}
+        Since maximizing GCMI maximizes the joint pairwise sum with the query set, it will lead to a subset similar to the query set $Q$.
+        """
 
-    weak_labeling(data_name,
-                  datadir,
-                  feature,
-                  model_name,
-                  budget,
-                  split_cfg,
-                  num_cls,
-                  learning_rate,
-                  run,
-                  device,
-                  computeClassErrorLog,
-                  "SIM", 'gcmi')
+        weak_labeling(data_name,
+                    datadir,
+                    feature,
+                    model_name,
+                    budget,
+                    split_cfg,
+                    num_cls,
+                    learning_rate,
+                    run,
+                    device,
+                    computeClassErrorLog,
+                    "SIM", 'gcmi')
 
-    """# LOGDETMI
-    
-    The SMI instantiation of LogDetMI can be defined as:
-    \begin{align}
-    I_f(A;Q)=\log\det(S_{A}) -\log\det(S_{A} - \eta^2 S_{A,Q}S_{Q}^{-1}S_{A,Q}^T)
-    \end{align}
-    $S_{A, B}$ denotes the cross-similarity matrix between the items in sets $A$ and $B$. The similarity matrix in constructed in such a way that the cross-similarity between $A$ and $Q$ is multiplied by $\eta$ to control the trade-off between query-relevance and diversity.
-    """
+        """# LOGDETMI
+        
+        The SMI instantiation of LogDetMI can be defined as:
+        \begin{align}
+        I_f(A;Q)=\log\det(S_{A}) -\log\det(S_{A} - \eta^2 S_{A,Q}S_{Q}^{-1}S_{A,Q}^T)
+        \end{align}
+        $S_{A, B}$ denotes the cross-similarity matrix between the items in sets $A$ and $B$. The similarity matrix in constructed in such a way that the cross-similarity between $A$ and $Q$ is multiplied by $\eta$ to control the trade-off between query-relevance and diversity.
+        """
 
-    weak_labeling(data_name,
-                  datadir,
-                  feature,
-                  model_name,
-                  budget,
-                  split_cfg,
-                  num_cls,
-                  learning_rate,
-                  run,
-                  device,
-                  computeClassErrorLog,
-                  "SIM", 'logdetmi')
+        weak_labeling(data_name,
+                    datadir,
+                    feature,
+                    model_name,
+                    budget,
+                    split_cfg,
+                    num_cls,
+                    learning_rate,
+                    run,
+                    device,
+                    computeClassErrorLog,
+                    "SIM", 'logdetmi')
 
-    """# Random"""
+        """# Random"""
 
-    # weak_labeling(data_name,
-    #               datadir,
-    #               feature,
-    #               model_name,
-    #               budget,
-    #               split_cfg,
-    #               num_cls,
-    #               learning_rate,
-    #               run,
-    #               device,
-    #               computeClassErrorLog,
-    #               "random", 'random')
+        # weak_labeling(data_name,
+        #               datadir,
+        #               feature,
+        #               model_name,
+        #               budget,
+        #               split_cfg,
+        #               num_cls,
+        #               learning_rate,
+        #               run,
+        #               device,
+        #               computeClassErrorLog,
+        #               "random", 'random')
 
 """# References
 [1] Rishabh Iyer, Ninad Khargoankar, Jeff Bilmes, and Himanshu Asnani. Submodular combinatorialinformation measures with applications in machine learning.arXiv preprint arXiv:2006.15412,2020
