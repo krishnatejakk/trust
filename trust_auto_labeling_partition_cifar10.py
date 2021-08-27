@@ -46,7 +46,7 @@ from trust.strategies.random_sampling import RandomSampling
 parser = argparse.ArgumentParser(description='Device ID and Class Count')
 parser.add_argument('--device_id', type=int, default=0,
                     help='CUDA Device ID')
-parser.add_argument('--per_cls_cnt', type=int, default=100,
+parser.add_argument('--per_cls_cnt', type=int, default=25,
                     help='Number of samples per class')
 
 args = parser.parse_args()
@@ -94,9 +94,9 @@ def create_model(name, num_cls, device, embedding_type):
         else:
             model = models.resnet18()
     elif name == 'MnistNet':
-        model = MnistNet()
+        model = models.MnistNet()
     elif name == 'ResNet164':
-        model = ResNet164(num_cls)
+        model = models.ResNet164(num_cls)
     model.apply(init_weights)
     model = model.to(device)
     return model
