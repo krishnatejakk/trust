@@ -193,4 +193,5 @@ class SMI(Strategy):
         greedyList = obj.maximize(budget=budget,optimizer=optimizer, stopIfZeroGain=stopIfZeroGain, 
                               stopIfNegativeGain=stopIfNegativeGain, verbose=verbose)
         greedyIndices = [x[0] for x in greedyList]
-        return greedyIndices
+        gains = [x[1] for x in greedyList]
+        return greedyIndices, gains

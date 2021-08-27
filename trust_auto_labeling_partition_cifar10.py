@@ -223,9 +223,9 @@ def print_final_results(res_dict, sel_cls_idx):
 The CIFAR-10 dataset contains 60,000 32x32 color images in 10 different classes.The 10 different classes represent airplanes, cars, birds, cats, deer, dogs, frogs, horses, ships, and trucks. There are 6,000 images of each class. The training set contains 50,000 images and test set contains 10,000 images. We will use custom_dataset() function in Trust to simulated a class imbalance scenario using the split_cfg dictionary given below. We then use a ResNet18 model as our task DNN and train it on the simulated imbalanced version of the CIFAR-10 dataset. Next we perform targeted selection using various SMI functions and compare their gain in overall accuracy as well as on the imbalanced classes.
 """
 
-cls_cnts = [100, 250, 500, 750, 1000]
-budgets = [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000]
-
+#cls_cnts = [25, 50, 100, 250, 500, 750, 1000]
+#budgets = [500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000]
+budgets = [5000]
 #for per_cls_cnt in cls_cnts:
 for budget in budgets:
     feature = "classimb"
@@ -365,7 +365,9 @@ for budget in budgets:
             print("Class: " + str(cnt) + "\n")
             strategy_sel.update_data(train_set, unlabeled_lake_set)
             strategy_sel.update_model(model)
-            subsets.append(strategy_sel.select(budget))
+            subset, gain = strategy_sel.select(budget)
+            subset = [x for _, x in sorted(zip(gain, subset), key=lambda pair: pair[0], reverse=True)]
+            subsets.append(subset)
             cnt += 1
         # ####SIM####
         # if (strategy == "SIM" or strategy == "SF"):
@@ -377,11 +379,15 @@ for budget in budgets:
 
         print("#### Selection Complete, Now re-training with augmented subset ####")
         results_dict = dict()
-        for i in range(num_cls):
-            tmp_subset = subsets[i]
-            tmp_targets = true_lake_set.targets[tmp_subset]
-            tmp_metrics = len(torch.where(tmp_targets == i)[0])/len(tmp_targets)
-            results_dict[i] = tmp_metrics
+        
+        for j in range(10):
+            budget_dict = dict()
+            for i in range(num_cls):
+                tmp_subset = subsets[i][0:500*(j+1)]
+                tmp_targets = true_lake_set.targets[tmp_subset]
+                tmp_metrics = (len(torch.where(tmp_targets == i)[0])/len(tmp_targets))
+                budget_dict[i] = tmp_metrics
+            results_dict[500 * (j+1)] = budget_dict
 
         with open(resultsPath, 'w') as json_file:
             json.dump(results_dict, json_file)

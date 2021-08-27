@@ -88,6 +88,7 @@ class PartitionStrategy(Strategy):
         beginning_split = 0
         
         selected_idx = []
+        selected_gains = []
         
         for i in range(self.num_partitions):
             
@@ -112,12 +113,13 @@ class PartitionStrategy(Strategy):
                 wrapped_strategy = self.wrapped_strategy_class(self.labeled_dataset, current_partition, self.private_dataset, self.model, self.target_classes, self.args)
             else:
                 wrapped_strategy = self.wrapped_strategy_class(self.labeled_dataset, current_partition, self.model, self.target_classes, self.args)
-            selected_partition_idxs = wrapped_strategy.select(partition_budget)
+            selected_partition_idxs, gains = wrapped_strategy.select(partition_budget)
             
             # Use the partition_index_list to map the selected indices w/ respect to the current partition to the indices w/ respect to the dataset
             to_add_idxs = np.array(partition_index_list)[selected_partition_idxs]
             selected_idx.extend(to_add_idxs)
+            selected_gains.extend(gains)
             beginning_split = end_split
             
         # Return the selected idx
-        return selected_idx
+        return selected_idx, selected_gains
