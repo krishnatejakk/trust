@@ -218,7 +218,7 @@ The CIFAR-10 dataset contains 60,000 32x32 color images in 10 different classes.
 parser = argparse.ArgumentParser(description='Device ID and Class Count')
 parser.add_argument('--device_id', type=int,
                     help='CUDA Device ID')
-parser.add_argument('--per_cls_cnt', type='int', 
+parser.add_argument('--per_cls_cnt', type=int, 
                     help='Number of samples per class')
 
 args = parser.parse_args()
