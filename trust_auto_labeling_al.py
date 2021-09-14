@@ -263,6 +263,7 @@ budgets = [50]
 for budget in budgets:
     feature = "classimb"
     device_id = args.device_id
+    # device_id = 3
     run = "test_run"
     datadir = 'data/'
     data_name = 'cifar10'
@@ -289,7 +290,7 @@ for budget in budgets:
 
     def active_learning(dataset_name, datadir, feature, model_name, budget, split_cfg, num_cls, learning_rate, run,
                     device, computeErrorLog, num_rounds, strategy="SIM", sf="", hil=True):
-        resultsPath = "./" + "al" + data_name + "_" + model_name + "_" + str(per_cls_cnt) + "_" + str(budget) + "_" + strategy + "_" + sf + "_" + str(hil) + ".json"
+        resultsPath = "./results/" + "al" + data_name + "_" + model_name + "_" + str(per_cls_cnt) + "_" + str(budget) + "_" + strategy + "_" + sf + "_" + str(hil) + ".json"
         # load the dataset in the class imbalance setting
         train_set, val_set, test_set, lake_set, sel_cls_idx, num_cls = load_dataset_custom(datadir, dataset_name, feature,
                                                                                         split_cfg, False, False)
@@ -346,7 +347,6 @@ for budget in budgets:
             bud = budget
             # Variables to store accuracies
             num_rounds = 1  # The first round is for training the initial model and the second round is to train the final model
-            full_trn_acc = 0
             
             # Model Creation
             model = create_model(model_name, num_cls, device, embedding_type)
