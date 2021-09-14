@@ -267,7 +267,9 @@ for budget in budgets:
     run = "test_run"
     datadir = 'data/'
     data_name = 'cifar10'
+    #data_name = 'mnist'
     model_name = 'ResNet18'
+    #model_name = 'LeNet'
     learning_rate = 0.01
     computeClassErrorLog = True
     device = "cuda:" + str(device_id) if torch.cuda.is_available() else "cpu"
@@ -308,6 +310,8 @@ for budget in budgets:
         # val_csvlog = []
         results_dict = dict()
         results_dict['hil_cost'] = {}
+        #Budget for subset selection
+        bud = budget
         
         for round in range(num_rounds):
             val_sets = []
@@ -344,9 +348,8 @@ for budget in budgets:
 
             true_lake_set = copy.deepcopy(lake_set)
             # Budget for subset selection
-            bud = budget
+            
             # Variables to store accuracies
-            num_rounds = 1  # The first round is for training the initial model and the second round is to train the final model
             
             # Model Creation
             model = create_model(model_name, num_cls, device, embedding_type)
@@ -368,9 +371,9 @@ for budget in budgets:
 
             if (strategy == "random"):
                 weak_labelers = []
+                budget = int(bud * num_cls)
                 strategy_sel = RandomSampling(train_set, unlabeled_lake_set, model, num_cls, strategy_args)
                 weak_labelers.append(strategy_sel)
-
 
             ###Model Pre-training###
             start_time = time.time()
@@ -420,9 +423,12 @@ for budget in budgets:
                 subset = [x for _, x in sorted(zip(gain, subset), key=lambda pair: pair[0], reverse=True)]
                 subsets.extend(subset)
                 train_set, lake_set, hil_cost = modify_datasets(train_set, lake_set, subset, hil, cnt)
-                total_hil_cost[cnt] = hil_cost
+                if strategy != "random":
+                    total_hil_cost[cnt] = hil_cost
+                else:
+                    total_hil_cost[cnt] = budget
                 cnt += 1
-            print("Round: ", round, "Labeling Precisions: ", total_hil_cost)
+            print("Round: ", round, "Labeling Costs: ", total_hil_cost)
             results_dict['hil_cost'][round] = total_hil_cost
             print("#### Selection Complete, Now re-training with augmented subset ####")
             
@@ -487,6 +493,23 @@ for budget in budgets:
     """
 
     """
+    #Random
+    """
+    active_learning(data_name,
+                  datadir,
+                  feature,
+                  model_name,
+                  budget,
+                  split_cfg,
+                  num_cls,
+                  learning_rate,
+                  run,
+                  device,
+                  computeClassErrorLog,
+                  10,
+                  "random", 'random')
+
+    """
     # FL2MI
     
     In the V2 variant, we set $D$ to be $V \cup Q$. The SMI instantiation of FL2MI can be defined as:
@@ -496,18 +519,18 @@ for budget in budgets:
     FL2MI is very intuitive for query relevance as well. It measures the representation of data points that are the most relevant to the query set and vice versa. It can also be thought of as a bidirectional representation score.
     """
 
-    active_learning(data_name,
-                datadir,
-                feature,
-                model_name,
-                budget,
-                split_cfg,
-                num_cls,
-                learning_rate,
-                run,
-                device,
-                computeClassErrorLog, num_rounds,
-                "SIM", 'fl2mi', args.hil)
+    # active_learning(data_name,
+    #             datadir,
+    #             feature,
+    #             model_name,
+    #             budget,
+    #             split_cfg,
+    #             num_cls,
+    #             learning_rate,
+    #             run,
+    #             device,
+    #             computeClassErrorLog, num_rounds,
+    #             "SIM", 'fl2mi', args.hil)
 
     """
     # GCMI

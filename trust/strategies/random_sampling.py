@@ -11,4 +11,5 @@ class RandomSampling(Strategy):
 
         rand_idx = np.random.permutation(len(self.unlabeled_dataset))[:budget]
         rand_idx = rand_idx.tolist()
-        return rand_idx
+        gains = [1]*len(rand_idx)
+        return rand_idx, gains

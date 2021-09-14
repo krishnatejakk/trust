@@ -414,7 +414,10 @@ def create_perclass_imb(dset_name, fullset, split_cfg, num_cls, augVal):
     lake_idx = []
     selected_classes=split_cfg['sel_cls_idx']
     for i in range(num_cls): #all_classes
-        full_idx_class = list(torch.where(torch.Tensor(fullset.targets) == i)[0].cpu().numpy())
+        if torch.is_tensor(fullset.targets):
+            full_idx_class = list(torch.where(fullset.targets == i)[0].cpu().numpy())
+        else:
+            full_idx_class = list(torch.where(torch.Tensor(fullset.targets) == i)[0].cpu().numpy())
         class_train_idx = list(np.random.choice(np.array(full_idx_class), size=split_cfg['per_class_train'][i], replace=False))
         remain_idx = list(set(full_idx_class) - set(class_train_idx))
         class_val_idx = list(np.random.choice(np.array(remain_idx), size=split_cfg['per_class_val'][i], replace=False))
@@ -429,10 +432,14 @@ def create_perclass_imb(dset_name, fullset, split_cfg, num_cls, augVal):
     random.shuffle(train_idx)
     random.shuffle(val_idx)
     random.shuffle(lake_idx)
-    train_set = SubsetWithTargets(fullset, train_idx, torch.Tensor(fullset.targets)[train_idx])
-    val_set = SubsetWithTargets(fullset, val_idx, torch.Tensor(fullset.targets)[val_idx])
-    lake_set = SubsetWithTargets(fullset, lake_idx, torch.Tensor(fullset.targets)[lake_idx])
-
+    if torch.is_tensor(fullset.targets):
+        train_set = SubsetWithTargets(fullset, train_idx, fullset.targets[train_idx])
+        val_set = SubsetWithTargets(fullset, val_idx, fullset.targets[val_idx])
+        lake_set = SubsetWithTargets(fullset, lake_idx, fullset.targets[lake_idx])
+    else:
+        train_set = SubsetWithTargets(fullset, train_idx, torch.Tensor(fullset.targets)[train_idx])
+        val_set = SubsetWithTargets(fullset, val_idx, torch.Tensor(fullset.targets)[val_idx])
+        lake_set = SubsetWithTargets(fullset, lake_idx, torch.Tensor(fullset.targets)[lake_idx])
     return train_set, val_set, lake_set, selected_classes
 
 def load_dataset_custom(datadir, dset_name, feature, split_cfg, augVal=False, dataAug=True):
@@ -537,9 +544,9 @@ def load_dataset_custom(datadir, dset_name, feature, split_cfg, augVal=False, da
 
     if(dset_name=="mnist"):
         num_cls=10
-        mnist_test_transform = transforms.Compose([transforms.Resize((32, 32)), transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+        mnist_test_transform = transforms.Compose([transforms.Resize((28, 28)), transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
         if(dataAug):
-            mnist_transform = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
+            mnist_transform = transforms.Compose([transforms.RandomCrop(28, padding=4), transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
         else:
             mnist_transform = mnist_test_transform
         fullset = torchvision.datasets.MNIST(root=datadir, train=True, download=True, transform=mnist_transform)
