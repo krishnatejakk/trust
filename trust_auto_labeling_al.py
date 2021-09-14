@@ -406,7 +406,7 @@ for budget in budgets:
                     full_trn_acc[round] = full_trn_correct / full_trn_total
                     print("Selection Round: ", round, " Training epoch [", num_ep, "]", " Training Acc: ", full_trn_acc[round], end="\r")
                     num_ep += 1
-                timing = time.time() - start_time
+                timing[round] = time.time() - start_time
 
             subsets = []
             cnt = 0
@@ -463,7 +463,7 @@ for budget in budgets:
                 val_losses[round] = val_loss
                 fulltrn_losses[round] = full_trn_loss
                 tst_losses[round] = tst_loss
-                print('Round: ', round + 1, 'FullTrn,TrainAcc,ValLoss,ValAcc,TstLoss,TstAcc,Time:', full_trn_loss, full_trn_acc[i], val_loss, val_acc[i], tst_loss, tst_acc[i], timing[i])
+                print('Round: ', round + 1, 'FullTrn,TrainAcc,ValLoss,ValAcc,TstLoss,TstAcc:', full_trn_loss, full_trn_acc[round], val_loss, val_acc[round], tst_loss, tst_acc[round])
         
             if(round==0): 
                 print("Saving initial model") 
