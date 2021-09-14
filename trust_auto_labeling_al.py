@@ -289,7 +289,7 @@ for budget in budgets:
 
     def active_learning(dataset_name, datadir, feature, model_name, budget, split_cfg, num_cls, learning_rate, run,
                     device, computeErrorLog, num_rounds, strategy="SIM", sf="", hil=True):
-        resultsPath = "./" + "al" + data_name + "_" + model_name + "_" + str(per_cls_cnt) + "_" + str(budget) + "_" + strategy + "_" + sf + ".json"
+        resultsPath = "./" + "al" + data_name + "_" + model_name + "_" + str(per_cls_cnt) + "_" + str(budget) + "_" + strategy + "_" + sf + "_" + str(hil) + ".json"
         # load the dataset in the class imbalance setting
         train_set, val_set, test_set, lake_set, sel_cls_idx, num_cls = load_dataset_custom(datadir, dataset_name, feature,
                                                                                         split_cfg, False, False)
