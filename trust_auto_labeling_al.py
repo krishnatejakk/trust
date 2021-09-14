@@ -375,7 +375,7 @@ for budget in budgets:
             ###Model Pre-training###
             start_time = time.time()
             num_ep = 1
-            while (full_trn_acc < 0.99 and num_ep < 300):
+            while (full_trn_acc[round] < 0.99 and num_ep < 300):
                 model.train()
                 for batch_idx, (inputs, targets) in enumerate(trainloader):
                     inputs, targets = inputs.to(device), targets.to(device, non_blocking=True)
@@ -404,7 +404,7 @@ for budget in budgets:
                         full_trn_correct += predicted.eq(targets).sum().item()
                     fulltrn_losses[round] = full_trn_loss
                     full_trn_acc[round] = full_trn_correct / full_trn_total
-                    print("Selection Round: ", round, " Training epoch [", num_ep, "]", " Training Acc: ", full_trn_acc, end="\r")
+                    print("Selection Round: ", round, " Training epoch [", num_ep, "]", " Training Acc: ", full_trn_acc[round], end="\r")
                     num_ep += 1
                 timing = time.time() - start_time
 
